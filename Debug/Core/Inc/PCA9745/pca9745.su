@@ -1,0 +1,6 @@
+pca9745.c:22:6:PCA9745_Set_PWMx	16	static
+pca9745.c:37:6:PCA9745_Set_IREFx	32	static
+pca9745.c:51:6:PCA9745_Set_Sleep	24	static
+pca9745.c:69:6:PCA9745_Set_LEDOUTx	24	static
+pca9745.c:85:9:PCA9745_Check_Temperature	24	static
+pca9745.c:100:6:PCA9745_Check_Errors	48	dynamic

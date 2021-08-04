@@ -1,0 +1,10 @@
+pca9745_io.c:11:9:Init_PCA9745	72	static
+pca9745_io.c:22:6:_PCA9745_Configure	32	static
+pca9745_io.c:31:6:_PCA9745_CS	16	static
+pca9745_io.c:35:6:_PCA9745_OE	16	static
+pca9745_io.c:39:6:_PCA9745_Write	32	static
+pca9745_io.c:50:6:_PCA9745_Read	40	dynamic
+pca9745_io.c:66:6:_PCA9745_Format_Data	24	static
+pca9745_io.c:79:6:_PCA9745_Set_SPI	16	static
+pca9745_io.c:83:6:_PCA9745_Set_CS	24	static
+pca9745_io.c:88:6:_PCA9745_Set_OE	24	static
