@@ -20,7 +20,7 @@
   * @retval None
   */
 void PCA9745_Set_PWMx(PCA9745 *p, uint16_t dev, uint8_t channel, uint8_t data){
-	_PCA9745_Format_Data(p, dev, PWM0 + channel, data);
+	_PCA9745_Format_Data(p, dev, PWM15 - channel, data);
 	_PCA9745_Write(p, p->instr_buffer, p->data_buffer);
 }
 
@@ -29,14 +29,14 @@ void PCA9745_Set_PWMx(PCA9745 *p, uint16_t dev, uint8_t channel, uint8_t data){
   * @note	The selected channel is set to a specific current value in mA (current).
   * 		Register values:
   * 	   *0x00 - 0 (mA)
-  * 		0x11 - 255 * 900 / R_ext * 0.25 (mA)
+  * 		0xff - 255 * 900 / R_ext * 0.25 (mA)
   *
   * @param  PCA9745 *p, uint16_t dev, uint8_t channel, float current
   * @retval None
   */
 void PCA9745_Set_IREFx(PCA9745 *p, uint16_t dev, uint8_t channel, float current){
 	uint8_t data = (uint8_t)((4 * p->r_ext * current) / 900);
-	_PCA9745_Format_Data(p, dev, IREF0 + channel, data);
+	_PCA9745_Format_Data(p, dev, IREF15 - channel, data);
 	_PCA9745_Write(p, p->instr_buffer, p->data_buffer);
 }
 

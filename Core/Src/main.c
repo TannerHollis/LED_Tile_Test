@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -44,9 +45,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-CAN_HandleTypeDef hcan1;
-CAN_HandleTypeDef hcan2;
-
 I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi1;
@@ -66,8 +64,6 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_CAN1_Init(void);
-static void MX_CAN2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -108,13 +104,12 @@ int main(void)
   MX_I2C1_Init();
   MX_SPI1_Init();
   MX_TIM1_Init();
-  MX_CAN1_Init();
-  MX_CAN2_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
   tile = Init_LED_Tile();
 
-  for(uint16_t i = 1; i < 6; i++){
+  for(uint16_t i = 0; i < 6; i++){
 	  LED_Tile_Set_LED_Intensity(&tile, 0, i, intensity);
   }
   _PCA9745_OE(tile.p, 0);
@@ -123,11 +118,52 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  LED_Tile_Twinkle_Start(&tile);
+  LED_Tile_Twinkle_Init(&tile, 50, 5);
   while (1)
   {
-	LED_Tile_Twinkle_Update(&tile);
-	HAL_Delay(10);
+	for(uint8_t led = 0; led < 5; led++){
+		for(uint8_t c = 0; c < 255; c += 1){
+			LED_Tile_Set_LED_Color(&tile, 0, led, c, 0, 0);
+			HAL_Delay(1);
+		}
+		LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, 0);
+
+		for(uint8_t c = 0; c < 255; c += 1){
+			LED_Tile_Set_LED_Color(&tile, 0, led, 0, c, 0);
+			HAL_Delay(1);
+		}
+		LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, 0);
+
+		for(uint8_t c = 0; c < 255; c += 1){
+			LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, c);
+			HAL_Delay(1);
+		}
+		LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, 0);
+	}
+
+	LED_Tile_Twinkle_Start(&tile, 0.01f);
+	for(float t = 0; t < 120; t += 0.01f){
+		LED_Tile_Twinkle_Update(&tile);
+		HAL_Delay(10);
+	}
+	LED_Tile_Twinkle_Stop(&tile);
+
+	for(uint8_t led = 0; led < 5; led++){
+		for(float t = 0; t < 1; t += 0.01f){
+			uint8_t r = (uint8_t) (32 * (1 + cos(t*2*M_PI)));
+			uint8_t g = (uint8_t) (32 * (1 + cos(t*2*M_PI + 2/3*M_PI)));
+			uint8_t b = (uint8_t) (32 * (1 + cos(t*2*M_PI + 4/3*M_PI)));
+			LED_Tile_Set_LED_Color(&tile, 0, led, r, g, b);
+			HAL_Delay(10);
+		}
+		LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, 0);
+	}
+
+	for(uint8_t i = 0; i < 255; i++){
+		LED_Tile_Set_IR_LED(&tile, 0, i);
+		HAL_Delay(10);
+	}
+	LED_Tile_Set_IR_LED(&tile, 0, 0);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -158,7 +194,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLM = 4;
   RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -176,80 +212,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief CAN1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_CAN1_Init(void)
-{
-
-  /* USER CODE BEGIN CAN1_Init 0 */
-
-  /* USER CODE END CAN1_Init 0 */
-
-  /* USER CODE BEGIN CAN1_Init 1 */
-
-  /* USER CODE END CAN1_Init 1 */
-  hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 16;
-  hcan1.Init.Mode = CAN_MODE_NORMAL;
-  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
-  hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = DISABLE;
-  hcan1.Init.AutoWakeUp = DISABLE;
-  hcan1.Init.AutoRetransmission = DISABLE;
-  hcan1.Init.ReceiveFifoLocked = DISABLE;
-  hcan1.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CAN1_Init 2 */
-
-  /* USER CODE END CAN1_Init 2 */
-
-}
-
-/**
-  * @brief CAN2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_CAN2_Init(void)
-{
-
-  /* USER CODE BEGIN CAN2_Init 0 */
-
-  /* USER CODE END CAN2_Init 0 */
-
-  /* USER CODE BEGIN CAN2_Init 1 */
-
-  /* USER CODE END CAN2_Init 1 */
-  hcan2.Instance = CAN2;
-  hcan2.Init.Prescaler = 16;
-  hcan2.Init.Mode = CAN_MODE_NORMAL;
-  hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan2.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan2.Init.TimeSeg2 = CAN_BS2_1TQ;
-  hcan2.Init.TimeTriggeredMode = DISABLE;
-  hcan2.Init.AutoBusOff = DISABLE;
-  hcan2.Init.AutoWakeUp = DISABLE;
-  hcan2.Init.AutoRetransmission = DISABLE;
-  hcan2.Init.ReceiveFifoLocked = DISABLE;
-  hcan2.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CAN2_Init 2 */
-
-  /* USER CODE END CAN2_Init 2 */
-
 }
 
 /**
@@ -309,7 +271,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -408,12 +370,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED0_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : nOE_Pin nCS_Pin */
-  GPIO_InitStruct.Pin = nOE_Pin|nCS_Pin;
+  /*Configure GPIO pin : nOE_Pin */
+  GPIO_InitStruct.Pin = nOE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(nOE_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : nCS_Pin */
+  GPIO_InitStruct.Pin = nCS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(nCS_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI3_IRQn, 0, 0);
@@ -428,13 +397,13 @@ static void MX_GPIO_Init(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == K1_Pin){
-		intensity += 0.05f;
+		intensity += 0.15f;
 
 	}
 	else if(GPIO_Pin == K0_Pin){
-		intensity -= 0.05f;
+		intensity -= 0.15f;
 	}
-	for(uint16_t i = 1; i < 6; i++){
+	for(uint16_t i = 0; i < 6; i++){
 		LED_Tile_Set_LED_Intensity(&tile, 0, i, intensity);
 	}
 }

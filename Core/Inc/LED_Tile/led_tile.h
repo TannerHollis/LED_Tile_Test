@@ -28,11 +28,12 @@ extern SPI_HandleTypeDef hspi1;
 #define G_A -0.00541666f
 #define G_B 0.220833f
 #define B_A -0.00625f
-#define B_B 0.3125f
+#define B_B 0.4f
+#define IR_A 0.0f
+#define IR_B 0.1125f
 
-#define TWINKLE_NUM 	20
-#define TWINKLE_CHANCE	1	//10 out of 1000 chance to spawn a new twinkle
-#define TWINKLE_TIME_STEP 0.01f
+#define TWINKLE_NUM_MAX 	5
+#define TWINKLE_CHANCE 		10000
 
 typedef struct {
 	uint8_t brightness;
@@ -52,14 +53,22 @@ typedef struct {
 
 typedef struct {
 	PCA9745 *p;
-	RGB_LED twinkle[TWINKLE_NUM];
-	uint8_t twinkle_en;
+
+	struct {
+		RGB_LED twinkles[TWINKLE_NUM_MAX];
+		uint8_t en;
+		uint16_t chance;	// x / 1000 chance to spawn a twinkle
+		float time_step;	// controls the decay rate
+		uint8_t num;
+	} twinkle;
 } LED_Tile;
 
 LED_Tile Init_LED_Tile();
 void LED_Tile_Set_LED_Intensity(LED_Tile *tile, uint16_t dev, uint8_t LED, float intensity);
 void LED_Tile_Set_LED_Color(LED_Tile *tile, uint16_t dev, uint8_t LED, uint8_t red, uint8_t green, uint8_t blue);
-void LED_Tile_Twinkle_Start(LED_Tile *tile);
+void LED_Tile_Set_IR_LED(LED_Tile *tile, uint16_t dev, uint8_t value);
+void LED_Tile_Twinkle_Init(LED_Tile *tile, uint16_t chance, uint8_t num);
+void LED_Tile_Twinkle_Start(LED_Tile *tile, float time_step);
 void LED_Tile_Twinkle_Stop(LED_Tile *tile);
 void LED_Tile_Twinkle_Update(LED_Tile *tile);
 void LED_Tile_Twinkle_Add(LED_Tile *tile);
