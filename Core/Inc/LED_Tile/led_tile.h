@@ -19,7 +19,12 @@ extern SPI_HandleTypeDef hspi1;
 #define TILE_OE_PORT	nOE_GPIO_Port
 #define TILE_OE_PIN		nOE_Pin
 
-#define NUM_TILES 1
+extern TIM_HandleTypeDef htim1;
+
+#define TILE_TIM		htim1
+#define TILE_TIM_MHZ	84
+
+#define NUM_TILES 2
 #define R_EXT 3600.0f
 #define MAX_INTESITY 2.25f
 
@@ -28,7 +33,7 @@ extern SPI_HandleTypeDef hspi1;
 #define G_A -0.00541666f
 #define G_B 0.220833f
 #define B_A -0.00625f
-#define B_B 0.4f
+#define B_B 0.6f
 #define IR_A 0.0f
 #define IR_B 0.1125f
 
@@ -54,6 +59,14 @@ typedef struct {
 typedef struct {
 	PCA9745 *p;
 
+	//Timer Variables
+	struct {
+		TIM_HandleTypeDef *htim;
+		uint8_t tim_mhz;
+		float update_freq;
+	} update_timer;
+
+	//Twinkle Variables
 	struct {
 		RGB_LED twinkles[TWINKLE_NUM_MAX];
 		uint8_t en;
@@ -67,8 +80,11 @@ LED_Tile Init_LED_Tile();
 void LED_Tile_Set_LED_Intensity(LED_Tile *tile, uint16_t dev, uint8_t LED, float intensity);
 void LED_Tile_Set_LED_Color(LED_Tile *tile, uint16_t dev, uint8_t LED, uint8_t red, uint8_t green, uint8_t blue);
 void LED_Tile_Set_IR_LED(LED_Tile *tile, uint16_t dev, uint8_t value);
+void LED_Tile_Clear(LED_Tile *tile, uint16_t dev);
+void LED_Tile_Clear_All(LED_Tile *tile);
+void LED_Tile_Test_All(LED_Tile *tile);
 void LED_Tile_Twinkle_Init(LED_Tile *tile, uint16_t chance, uint8_t num);
-void LED_Tile_Twinkle_Start(LED_Tile *tile, float time_step);
+void LED_Tile_Twinkle_Start(LED_Tile *tile, float freq);
 void LED_Tile_Twinkle_Stop(LED_Tile *tile);
 void LED_Tile_Twinkle_Update(LED_Tile *tile);
 void LED_Tile_Twinkle_Add(LED_Tile *tile);
@@ -76,5 +92,7 @@ float f_brightness(float a, float b, float t);
 float Get_Intensity(float intensity, float a, float b);
 float f_x(float x, float a, float b, float c);
 float f_dx(float x, float a, float b);
+void Start_Update_Timer(LED_Tile *tile, float freq);
+void Stop_Update_Timer(LED_Tile *tile);
 
 #endif /* INC_LED_TILE_LED_TILE_H_ */

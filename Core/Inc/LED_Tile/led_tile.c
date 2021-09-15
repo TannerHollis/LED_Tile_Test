@@ -27,9 +27,16 @@ PCA9745 p;
   */
 LED_Tile Init_LED_Tile(){
 	LED_Tile tile;
+
+	//Configure PCA9745 driver
 	p = Init_PCA9745(&TILE_SPI, TILE_CS_PORT, TILE_CS_PIN, TILE_OE_PORT, TILE_OE_PIN);
 	_PCA9745_Configure(&p, R_EXT, NUM_TILES, instr_buffer, data_buffer, rx_buffer);
 	tile.p = &p;
+
+	//Configure update timer
+	tile.update_timer.htim = &TILE_TIM;
+	tile.update_timer.tim_mhz = TILE_TIM_MHZ;
+	tile.update_timer.update_freq = 100;
 	return tile;
 }
 
@@ -71,6 +78,21 @@ void LED_Tile_Set_LED_Color(LED_Tile *tile, uint16_t dev, uint8_t LED, uint8_t r
 }
 
 /**
+  * @brief  Set Color of LEDs on Each Tile
+  * @note	Set the respective PWM register values of the RGB LED channels
+  *
+  * @param  LED_Tile *tile, uint8 red, uint8_t green, uint8_t blue
+  * @retval None
+  */
+void LED_Tile_Set_LED_Color_All(LED_Tile *tile, uint8_t r, uint8_t g, uint8_t b){
+	for(uint8_t led = 0; led < 5; led++){
+		for(uint16_t dev = 0; dev < NUM_TILES; dev++){
+			LED_Tile_Set_LED_Color(tile, dev, led, r, g, b);
+		}
+	}
+}
+
+/**
   * @brief  Set Color of LED
   * @note	Set the respective IR register values of the IR LED channel
   *
@@ -79,6 +101,54 @@ void LED_Tile_Set_LED_Color(LED_Tile *tile, uint16_t dev, uint8_t LED, uint8_t r
   */
 void LED_Tile_Set_IR_LED(LED_Tile *tile, uint16_t dev, uint8_t value){
 	PCA9745_Set_PWMx(tile->p, dev, 15, value);
+}
+
+/**
+  * @brief  Clear All Color in Tile
+  * @note	Set the respective PWM register to zero
+  *
+  * @param  LED_Tile *tile, uint16_t dev
+  * @retval None
+  */
+void LED_Tile_Clear(LED_Tile *tile, uint16_t dev){
+	for(uint8_t i = 0; i < 16; i++){
+		PCA9745_Set_PWMx(tile->p, dev, i, 0);
+	}
+}
+
+/**
+  * @brief  Clear All Color in All Tiles
+  * @note	Set the respective PWM register to zero
+  *
+  * @param  LED_Tile *tile
+  * @retval None
+  */
+void LED_Tile_Clear_All(LED_Tile *tile){
+	for(uint8_t i = 0; i < NUM_TILES; i++){
+		LED_Tile_Clear(tile, i);
+	}
+}
+
+/**
+  * @brief  Tests All Color in All Tiles
+  * @note	Tests red, green, blue values of all LEDs in all tiles
+  *
+  * @param  LED_Tile *tile
+  * @retval None
+  */
+void LED_Tile_Test_All(LED_Tile *tile){
+	for(uint8_t r = 0; r < 255; r++){
+		LED_Tile_Set_LED_Color_All(tile, r, 0, 0);
+		HAL_Delay(1);
+	}
+	for(uint8_t g = 0; g < 255; g++){
+		LED_Tile_Set_LED_Color_All(tile, 0, g, 0);
+		HAL_Delay(1);
+	}
+	for(uint8_t b = 0; b < 255; b++){
+		LED_Tile_Set_LED_Color_All(tile, 0, 0, b);
+		HAL_Delay(1);
+	}
 }
 
 /**
@@ -101,20 +171,19 @@ void LED_Tile_Twinkle_Init(LED_Tile *tile, uint16_t chance, uint8_t num){
 /**
   * @brief  Start twinkle mode
   * @note	Start the twinkle mode with a fixed time step.
-  * 		The time step is used to determine the twinkle decay rate and scale
-  * 		of the original RGB value of the psuedo-random initial value of the twinkle.
   *
   * @note	This also sets all twinkles to inactive
   *
-  * @param  LED_Tile *tile, uint16_t chance, float time_step
+  * @param  LED_Tile *tile, uint16_t chance, float freq
   * @retval None
   */
-void LED_Tile_Twinkle_Start(LED_Tile *tile, float time_step){
+void LED_Tile_Twinkle_Start(LED_Tile *tile, float freq){
 	tile->twinkle.en = 1;
-	tile->twinkle.time_step = time_step;
+	tile->twinkle.time_step = 1.0f / freq;
 	for(uint8_t i = 0; i < TWINKLE_NUM_MAX; i++){
 		tile->twinkle.twinkles[i].active = 0;
 	}
+	Start_Update_Timer(tile, freq);
 }
 
 /**
@@ -127,6 +196,7 @@ void LED_Tile_Twinkle_Start(LED_Tile *tile, float time_step){
   * @retval None
   */
 void LED_Tile_Twinkle_Stop(LED_Tile *tile){
+	Stop_Update_Timer(tile);
 	tile->twinkle.en = 0;
 	for(uint8_t i = 0; i < tile->twinkle.num; i++){
 		if(tile->twinkle.twinkles[i].active == 1){
@@ -213,7 +283,7 @@ void LED_Tile_Twinkle_Add(LED_Tile *tile){
 				tile->twinkle.twinkles[i].g = rand() % 255;
 				tile->twinkle.twinkles[i].b = rand() % 255;
 				tile->twinkle.twinkles[i].a_0 = (float)(rand() % 95 + 5) / 20.0f;
-				tile->twinkle.twinkles[i].a_1 = tile->twinkle.twinkles[i].a_0 + 1.0f;
+				tile->twinkle.twinkles[i].a_1 = tile->twinkle.twinkles[i].a_0 + (float)(rand() % 99 + 1) / 20.0f;
 				tile->twinkle.twinkles[i].t_max = log(tile->twinkle.twinkles[i].a_1 / tile->twinkle.twinkles[i].a_0) / (tile->twinkle.twinkles[i].a_1 - tile->twinkle.twinkles[i].a_0);
 				tile->twinkle.twinkles[i].scale = 1.0f / f_brightness(tile->twinkle.twinkles[i].a_0, tile->twinkle.twinkles[i].a_1, tile->twinkle.twinkles[i].t_max);
 				break;
@@ -277,3 +347,34 @@ float f_x(float x, float a, float b, float c){
 float f_dx(float x, float a, float b){
 	return 2*a*x + b;
 }
+
+/**
+  * @brief  Starts the Update Timer
+  * @note	Configures the timer prescaler (PSC) and autoreload (ARR) registers for a given frequency.
+  * 		Based on the timer MHz value, the timer prescaler is configured so that the autoreload
+  * 		register is based on a 1MHz input.
+  * 			freq = 50.0f
+  * 			ARR = 1MHz / 50.0f = 20000 - 1 = 19999
+  * 			freq_max = 1 MHz
+  * 			freq_min = 15.26 Hz
+  *
+  * @param  LED_Tile *tile
+  * @retval None
+  */
+void Start_Update_Timer(LED_Tile *tile, float freq){
+	tile->update_timer.htim->Instance->PSC = (uint16_t) (tile->update_timer.tim_mhz - 1);
+	tile->update_timer.htim->Instance->ARR = (uint16_t) (tile->update_timer.tim_mhz * 1000000 / tile->update_timer.htim->Instance->PSC / freq - 1);
+	tile->update_timer.update_freq = freq;
+	HAL_TIM_Base_Start_IT(tile->update_timer.htim);
+}
+
+/**
+  * @brief  Stops the Update Timer
+  *
+  * @param  LED_Tile *tile
+  * @retval None
+  */
+void Stop_Update_Timer(LED_Tile *tile){
+	HAL_TIM_Base_Stop_IT(tile->update_timer.htim);
+}
+

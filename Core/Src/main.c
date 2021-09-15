@@ -103,67 +103,33 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_SPI1_Init();
-  MX_TIM1_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
   tile = Init_LED_Tile();
 
-  for(uint16_t i = 0; i < 6; i++){
-	  LED_Tile_Set_LED_Intensity(&tile, 0, i, intensity);
+  for(uint8_t dev = 0; dev < NUM_TILES; dev++){
+	  for(uint16_t i = 0; i < 6; i++){
+		  LED_Tile_Set_LED_Intensity(&tile, dev, i, intensity);
+	  }
   }
+
   _PCA9745_OE(tile.p, 0);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  LED_Tile_Twinkle_Init(&tile, 50, 5);
-  while (1)
-  {
-	for(uint8_t led = 0; led < 5; led++){
-		for(uint8_t c = 0; c < 255; c += 1){
-			LED_Tile_Set_LED_Color(&tile, 0, led, c, 0, 0);
-			HAL_Delay(1);
-		}
-		LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, 0);
 
-		for(uint8_t c = 0; c < 255; c += 1){
-			LED_Tile_Set_LED_Color(&tile, 0, led, 0, c, 0);
-			HAL_Delay(1);
-		}
-		LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, 0);
+  while (1){
+	LED_Tile_Test_All(&tile);
+	LED_Tile_Clear_All(&tile);
 
-		for(uint8_t c = 0; c < 255; c += 1){
-			LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, c);
-			HAL_Delay(1);
-		}
-		LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, 0);
-	}
-
-	LED_Tile_Twinkle_Start(&tile, 0.01f);
-	for(float t = 0; t < 120; t += 0.01f){
-		LED_Tile_Twinkle_Update(&tile);
-		HAL_Delay(10);
-	}
+	LED_Tile_Twinkle_Init(&tile, 500, 10);
+	LED_Tile_Twinkle_Start(&tile, 100.0f);
+	HAL_Delay(10000);
 	LED_Tile_Twinkle_Stop(&tile);
-
-	for(uint8_t led = 0; led < 5; led++){
-		for(float t = 0; t < 1; t += 0.01f){
-			uint8_t r = (uint8_t) (32 * (1 + cos(t*2*M_PI)));
-			uint8_t g = (uint8_t) (32 * (1 + cos(t*2*M_PI + 2/3*M_PI)));
-			uint8_t b = (uint8_t) (32 * (1 + cos(t*2*M_PI + 4/3*M_PI)));
-			LED_Tile_Set_LED_Color(&tile, 0, led, r, g, b);
-			HAL_Delay(10);
-		}
-		LED_Tile_Set_LED_Color(&tile, 0, led, 0, 0, 0);
-	}
-
-	for(uint8_t i = 0; i < 255; i++){
-		LED_Tile_Set_IR_LED(&tile, 0, i);
-		HAL_Delay(10);
-	}
-	LED_Tile_Set_IR_LED(&tile, 0, 0);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -298,8 +264,8 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_IC_InitTypeDef sConfigIC = {0};
 
   /* USER CODE BEGIN TIM1_Init 1 */
 
@@ -311,21 +277,18 @@ static void MX_TIM1_Init(void)
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_IC_Init(&htim1) != HAL_OK)
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
-  if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -405,6 +368,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	}
 	for(uint16_t i = 0; i < 6; i++){
 		LED_Tile_Set_LED_Intensity(&tile, 0, i, intensity);
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim == &htim1){
+		LED_Tile_Twinkle_Update(&tile);
 	}
 }
 
